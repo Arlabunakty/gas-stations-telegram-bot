@@ -1,0 +1,18 @@
+spec:
+  name: gas-stations-telegram-bot
+  alerts:
+  - rule: DEPLOYMENT_FAILED
+  functions:
+    - name: gas-stations-telegram-bot-endpoint
+      github:
+        branch: master
+        deploy_on_push: true
+        repo: Arlabunakty/gas-stations-telegram-bot
+      source_dir: "/"
+      envs: 
+        - key: TELEGRAM_BOT_TOKEN
+          value: <REPLACE_ME>
+        - key: TELEGRAM_BOT_HOOK_PATH
+          value: <REPLACE_ME>
+      routes: 
+        - path: '/api'
