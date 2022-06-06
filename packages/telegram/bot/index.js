@@ -15,11 +15,18 @@ bot.on('sticker', (ctx) => ctx.reply('👍'));
 bot.hears('hi', (ctx) => ctx.reply('Hey there'));
 
 bot.hears('Паливо', (ctx) => {
+    ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
+
     return ctx.reply(
         'Отримати інформацію по паливу...',
-        Markup.keyboard([Markup.button.locationRequest("Поділитися гео-локацією")]).resize()
+        Markup.keyboard([Markup.button.locationRequest("Поділитися гео-локацією")]).resize().oneTime()
     )
 });
+
+const geolocationMiddleware = Telegraf.optional(f => f.message.location !== undefined, ctx => {
+    ctx.reply('Your location ' + ctx.message.location);
+});
+bot.use(geolocationMiddleware);
 
 bot.telegram.setWebhook(process.env.TELEGRAM_BOT_HOOK_PATH);
 
