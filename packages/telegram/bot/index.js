@@ -34,17 +34,6 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         const client = await connect();
         const db = await client.db(process.env.DATABASE);
         const stationsCollection = await db.collection("stations");
-        const query = {
-            location: {
-                $nearSphere: {
-                    $geometry: {
-                        type: "Point",
-                        coordinates: [ctx.message.location.longitude, ctx.message.location.latitude]
-                    },
-                    $maxDistance: 15000 // 15 km
-                }
-            }
-        };
         const aggregation = [{
             '$geoNear': {
                 'near': {
@@ -55,14 +44,17 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
                 'maxDistance': 15000,
                 'spherical': true
             }
+        }, {
+            '$sort': {
+                'distance': 1
+            }
         }];
-        // const stations = await stationsCollection.aggregate([aggregation]).toArray();
-        const stations = await stationsCollection.find(query).toArray();
+        const stations = await stationsCollection.aggregate(aggregation).toArray();
 
         stations.forEach(station => {
-            const description = station.fuelLimits.map(el => el.description).join('\\n');
-            ctx.reply( /* (station.distance.toFixed(2) * 1) + */
-                'Station ' + station._id + '\n Link https://www.google.com/maps/search/?api=1&query=' +
+            const description = station.fuelLimits.map(el => el.description).join('\n');
+            ctx.reply(((station.distance / 1000).toFixed(2) * 1) +
+                ' km ' + station._id + '\n Link https://www.google.com/maps/search/?api=1&query=' +
                 station.geoPoint.lat + '%2C' + station.geoPoint.lon + ' \n Description:\n' + description);
         });
     });

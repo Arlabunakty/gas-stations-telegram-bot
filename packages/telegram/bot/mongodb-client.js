@@ -6,8 +6,6 @@ const path = require('path');
 const DATABASE_URL = process.env.DATABASE_URL;
 const uri = DATABASE_URL;
 
-console.table(process.env);
-
 // const tlsCAFilePath = path.resolve(__dirname, 'certificate.pem');
 // fs.writeFileSync(tlsCAFilePath, DB_CERT, { encoding: 'utf8' });
 
