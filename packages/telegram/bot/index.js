@@ -1,4 +1,5 @@
 // require('dotenv').config();
+const connect = require('./mongodb-client');
 const { Telegraf, Markup } = require('telegraf');
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -25,7 +26,27 @@ bot.hears('Паливо', (ctx) => {
 
 const geolocationMiddleware = Telegraf.optional(f => f.message.location !== undefined, ctx => {
     ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
-    ctx.reply('Your location: longitude=' + ctx.message.location.longitude + " latitude=" + ctx.message.location.latitude);
+    ctx.reply('Your location: longitude=' + ctx.message.location.longitude + " latitude=" + ctx.message.location.latitude,
+        Markup.removeKeyboard(true));
+    const client = await connect();
+    const db = await client.db(process.env.DATABASE);
+    const stationsCollection = await db.collection("stations");
+    const query = {
+        $nearSphere: {
+            $geometry: {
+                type: "Point",
+                coordinates: [ctx.message.location.longitude, ctx.message.location.latitude]
+            },
+            $maxDistance: 15000 // 15 km
+        }
+    };
+    const stations = await stationsCollection.find(query).toArray();
+
+    stations.forEach(station => {
+        const description = station.fuelLimits.map(el => el.description).join('\\n');
+        ctx.reply('Station ' + station._id + '\\nLink https://www.google.com/maps/search/?api=1&query=' +
+            ctx.message.location.latitude + '%2C' + ctx.message.location.longitude + '\\n Description:\\n' + description);
+    });
 });
 
 bot.use(geolocationMiddleware);
