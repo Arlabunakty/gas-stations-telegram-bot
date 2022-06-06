@@ -24,8 +24,8 @@ bot.hears('Паливо', (ctx) => {
     )
 });
 
-const geolocationMiddleware = Telegraf.optional(f => f.message.location !== undefined, async ctx => {
-    ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
+const geolocationMiddleware = Telegraf.optional(f => f.message !== undefined && f.message.location !== undefined, async ctx => {
+    // ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
     ctx.reply('Your location: longitude=' + ctx.message.location.longitude + " latitude=" + ctx.message.location.latitude,
         Markup.removeKeyboard(true));
 
