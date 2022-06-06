@@ -14,7 +14,6 @@ console.table(process.env);
 // Create a module-scoped MongoClient promise.
 // CRITICAL: connect() must be called outside function handler so that the client
 // can be reused across function invocations.
-console.log(uri);
 let client = new MongoClient(uri);
 
 // , {

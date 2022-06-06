@@ -35,20 +35,35 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         const db = await client.db(process.env.DATABASE);
         const stationsCollection = await db.collection("stations");
         const query = {
-            $nearSphere: {
-                $geometry: {
-                    type: "Point",
-                    coordinates: [ctx.message.location.longitude, ctx.message.location.latitude]
-                },
-                $maxDistance: 15000 // 15 km
+            location: {
+                $nearSphere: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [ctx.message.location.longitude, ctx.message.location.latitude]
+                    },
+                    $maxDistance: 15000 // 15 km
+                }
             }
         };
+        const aggregation = [{
+            '$geoNear': {
+                'near': {
+                    'type': 'Point',
+                    'coordinates': [ctx.message.location.longitude, ctx.message.location.latitude]
+                },
+                'distanceField': 'distance',
+                'maxDistance': 15000,
+                'spherical': true
+            }
+        }];
+        // const stations = await stationsCollection.aggregate([aggregation]).toArray();
         const stations = await stationsCollection.find(query).toArray();
 
         stations.forEach(station => {
             const description = station.fuelLimits.map(el => el.description).join('\\n');
-            ctx.reply('Station ' + station._id + '\\nLink https://www.google.com/maps/search/?api=1&query=' +
-                ctx.message.location.latitude + '%2C' + ctx.message.location.longitude + '\\n Description:\\n' + description);
+            ctx.reply( /* (station.distance.toFixed(2) * 1) + */
+                'Station ' + station._id + '\n Link https://www.google.com/maps/search/?api=1&query=' +
+                station.geoPoint.lat + '%2C' + station.geoPoint.lon + ' \n Description:\n' + description);
         });
     });
 
