@@ -3,6 +3,8 @@ packages:
     environment:
       TELEGRAM_BOT_TOKEN: "${TELEGRAM_BOT_TOKEN}"
       TELEGRAM_BOT_HOOK_PATH: "${TELEGRAM_BOT_HOOK_PATH}"
+      DATABASE: "${DATABASE}"
+      DATABASE_URL: "${DATABASE_URL}"
     actions:
       - name: bot 
         runtime: nodejs:default
