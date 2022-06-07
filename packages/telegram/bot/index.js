@@ -12,8 +12,8 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
     f.message !== undefined &&
     f.message.location !== undefined, async ctx => {
         // ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
-        ctx.reply('Your location: longitude=' + ctx.message.location.longitude + " latitude=" + ctx.message.location.latitude,
-            Markup.removeKeyboard(true));
+        // ctx.reply('Your location: longitude=' + ctx.message.location.longitude + " latitude=" + ctx.message.location.latitude,
+        // Markup.removeKeyboard(true));
 
         const configuration = {
             '/Паливо': [],
@@ -27,39 +27,49 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         const db = await client.db(process.env.DATABASE);
         const stationsCollection = await db.collection("stations");
         const aggregation = [{
-            '$geoNear': {
-                'near': {
-                    'type': 'Point',
-                    'coordinates': [ctx.message.location.longitude, ctx.message.location.latitude]
-                },
-                'distanceField': 'distance',
-                'maxDistance': 15000,
-                'query': {
-                    'fuelLimits': {
-                        '$elemMatch': {
-                            'limitType': {
-                                '$in': ['MOBILE_APP', 'BANK_CARD', 'CASH']
-                            },
-                            'fuel.normalizedStandard': {
-                                '$in': configuration[ctx['session']['lastFuelCommand']]
+                '$geoNear': {
+                    'near': {
+                        'type': 'Point',
+                        'coordinates': [ctx.message.location.longitude, ctx.message.location.latitude]
+                    },
+                    'distanceField': 'distance',
+                    'maxDistance': 50000,
+                    'query': {
+                        'fuelLimits': {
+                            '$elemMatch': {
+                                'limitType': {
+                                    '$in': ['MOBILE_APP', 'BANK_CARD', 'CASH']
+                                },
+                                'fuel.normalizedStandard': {
+                                    '$in': configuration[ctx['session']['lastFuelCommand']]
+                                }
                             }
                         }
-                    }
-                },
-                'spherical': true
+                    },
+                    'spherical': true
+                }
+            },
+            {
+                '$sort': {
+                    'distance': 1
+                }
+            },
+            {
+                '$limit': 5
             }
-        }, {
-            '$sort': {
-                'distance': 1
-            }
-        }];
+        ];
         const stations = await stationsCollection.aggregate(aggregation).toArray();
+
+        if (stations.length === 0) {
+            ctx.reply('В радіусі 50 км не має АЗК з обраним пальним', Markup.removeKeyboard(true));
+        }
 
         stations.forEach(station => {
             const description = station.fuelLimits.map(el => el.description).join('\n');
             ctx.reply(((station.distance / 1000).toFixed(2) * 1) +
                 ' km ' + station._id + '\n [Map](https://www.google.com/maps/search/?api=1&query=' +
-                station.geoPoint.lat + '%2C' + station.geoPoint.lon + ') \n Description:\n' + description);
+                station.geoPoint.lat + '%2C' + station.geoPoint.lon + ') \n Description:\n' + description,
+                Markup.removeKeyboard(true));
         });
     });
 
