@@ -59,8 +59,6 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         ];
         const stations = await stationsCollection.aggregate(aggregation).toArray();
 
-        console.log('Found ' + stations.length + ' stations');
-
         if (stations.length === 0) {
             ctx.reply('В радіусі 50 км не має АЗК з обраним пальним', Markup.removeKeyboard(true));
         }
@@ -70,12 +68,11 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
                 .filter((el, i) => ['MOBILE_APP', 'BANK_CARD', 'CASH'].includes(el.limitType))
                 .map(el => el.description)
                 .join('\n');
-            const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) +
-                ' km</b> ' + station._id + '\n' +
+            const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) + ' км</b>\n' +
+                station.description + '\n' +
                 '<a href="https://www.google.com/maps/search/?api=1&query=' +
                 station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
-                'Description:\n' + description;
-            console.log('message=' + message);
+                description;
             ctx.replyWithHTML(message, Markup.removeKeyboard(true));
         });
     });
