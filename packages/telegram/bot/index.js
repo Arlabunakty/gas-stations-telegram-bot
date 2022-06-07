@@ -8,38 +8,6 @@ if (TELEGRAM_BOT_TOKEN === undefined) {
     throw new Error('TELEGRAM_BOT_TOKEN must be provided!');
 }
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
-
-bot.use(Telegraf.log());
-
-connect().then(client => {
-    console.log('Conecting to database');
-    return client.db('telegram-bot');
-}).then(db => {
-    console.log('Register middleware telegraf-session-mongodb');
-    bot.use(session(db, { collectionName: 'sessions', sessionName: 'session' }));
-});
-
-bot.start((ctx) => ctx.reply('Привіт\nБот допоможе знайти паливо якщо воно є поряд!',
-    Markup.keyboard([
-        ['95 та преміум'],
-        ['ДП та преміум'],
-        ['ГАЗ', '92']
-    ]).oneTime().resize()));
-
-bot.help((ctx) => ctx.reply('Send me a sticker'));
-bot.on('sticker', (ctx) => ctx.reply('👍'));
-bot.hears('hi', (ctx) => ctx.reply('Hey there'));
-
-bot.hears(/^((95 та преміум)|(ДП та преміум)|(ГАЗ)|(92))$/, (ctx) => {
-    //ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
-    ctx['session']['lastFuelCommand'] = ctx.message.text;
-    return ctx.reply(
-        'Отримати інформацію по паливу за гео-локацією...',
-        Markup.keyboard([Markup.button.locationRequest("Поділитися гео-локацією")]).resize().oneTime()
-    )
-});
-
 const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &&
     f.message !== undefined &&
     f.message.location !== undefined, async ctx => {
@@ -95,13 +63,42 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         });
     });
 
-bot.use(geolocationMiddleware);
+const bot = async function() {
+    const botInstance = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+    botInstance.use(Telegraf.log());
+    const client = await connect();
+    const db = await client.db('telegram-bot');
+    botInstance.use(session(db, { collectionName: 'sessions' }));
 
-bot.telegram.setWebhook(process.env.TELEGRAM_BOT_HOOK_PATH);
+    botInstance.start((ctx) => ctx.reply('Привіт\nБот допоможе знайти паливо якщо воно є поряд!',
+        Markup.keyboard([
+            ['95 та преміум'],
+            ['ДП та преміум'],
+            ['ГАЗ', '92']
+        ]).oneTime().resize()));
+
+    botInstance.help((ctx) => ctx.reply('Send me a sticker'));
+    botInstance.on('sticker', (ctx) => ctx.reply('👍'));
+    botInstance.hears('hi', (ctx) => ctx.reply('Hey there'));
+    botInstance.hears(/^((95 та преміум)|(ДП та преміум)|(ГАЗ)|(92))$/, (ctx) => {
+        //ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
+        ctx['session']['lastFuelCommand'] = ctx.message.text;
+        return ctx.reply(
+            'Отримати інформацію по паливу за гео-локацією...',
+            Markup.keyboard([Markup.button.locationRequest("Поділитися гео-локацією")]).resize().oneTime()
+        )
+    });
+    botInstance.use(geolocationMiddleware);
+
+    botInstance.telegram.setWebhook(process.env.TELEGRAM_BOT_HOOK_PATH);
+
+    return botInstance;
+}
 
 async function main(args) {
     try {
-        await bot.handleUpdate(args)
+        const botInstance = await bot();
+        await botInstance.handleUpdate(args)
         return {
             statusCode: 200,
             body: {
