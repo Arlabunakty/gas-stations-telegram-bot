@@ -21,7 +21,7 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
             'ДП та преміум': ['МДП+', 'PULLS Diesel', 'МДП', 'ДП'],
             'ГАЗ': ['ГАЗ']
         }
-
+        const fuels = configuration[ctx['session']['lastFuelCommand']];
         const client = await connect();
         const db = await client.db(process.env.DATABASE);
         const stationsCollection = await db.collection("stations");
@@ -40,7 +40,7 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
                                     '$in': ['MOBILE_APP', 'BANK_CARD', 'CASH']
                                 },
                                 'fuel.normalizedStandard': {
-                                    '$in': configuration[ctx['session']['lastFuelCommand']]
+                                    '$in': fuels
                                 }
                             }
                         }
@@ -64,10 +64,11 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         }
 
         stations.forEach(station => {
-            const description = station.fuelLimits
+            const descriptions = station.fuelLimits
                 .filter((el, i) => ['MOBILE_APP', 'BANK_CARD', 'CASH'].includes(el.limitType))
+                .filter((el, i) => fuels.includes(el.fuel.normalizedStandard))
                 .map(el => el.description)
-                .join('\n');
+            const description = [...new Set(descriptions)].join('\n');
             const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) + ' км</b>\n' +
                 station.description + '\n' +
                 '<a href="https://www.google.com/maps/search/?api=1&query=' +
