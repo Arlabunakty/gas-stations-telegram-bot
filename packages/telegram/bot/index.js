@@ -69,12 +69,14 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
             const description = station.fuelLimits
                 .filter((el, i) => ['MOBILE_APP', 'BANK_CARD', 'CASH'].includes(el.limitType))
                 .map(el => el.description)
-                .join('<br>');
-            ctx.replyWithHTML(((station.distance / 1000).toFixed(2) * 1) +
-                ' km ' + station._id + '<br> <a href="https://www.google.com/maps/search/?api=1&query=' +
-                station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>' +
-                '<br>Description:<br>' + description,
-                Markup.removeKeyboard(true));
+                .join('\n');
+            const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) +
+                ' km</b> ' + station._id + '\n' +
+                '<a href="https://www.google.com/maps/search/?api=1&query=' +
+                station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
+                'Description:\n' + description;
+            console.log('message=' + message);
+            ctx.replyWithHTML(message, Markup.removeKeyboard(true));
         });
     });
 
