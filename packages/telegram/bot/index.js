@@ -15,13 +15,8 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         // ctx.reply('Your location: longitude=' + ctx.message.location.longitude + " latitude=" + ctx.message.location.latitude,
         // Markup.removeKeyboard(true));
 
-        const configuration = {
-            '95 та преміум': ['PULLS 95', 'М100', '98', 'М95', '95'],
-            '92': ['92'],
-            'ДП та преміум': ['МДП+', 'PULLS Diesel', 'МДП', 'ДП'],
-            'ГАЗ': ['ГАЗ']
-        }
-        const fuels = configuration[ctx['session']['lastFuelCommand']];
+        const fuels = ctx['session']['fuelType'];
+        const payMethods = ctx['session']['payMethod'];
         const client = await connect();
         const db = await client.db(process.env.DATABASE);
         const stationsCollection = await db.collection("stations");
@@ -63,9 +58,10 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
             return ctx.reply('В радіусі 50 км не має АЗК з обраним пальним', Markup.removeKeyboard(true));
         }
 
-        await stations.map(async station => {
+        for (let index = 0; index < stations.length; index++) {
+            const station = stations[index];
             const descriptions = station.fuelLimits
-                .filter((el, i) => ['MOBILE_APP', 'BANK_CARD', 'CASH'].includes(el.limitType))
+                .filter((el, i) => payMethods.includes(el.limitType))
                 .filter((el, i) => fuels.includes(el.fuel.normalizedStandard))
                 .map(el => el.description)
             const description = [...new Set(descriptions)].join('\n');
@@ -74,8 +70,8 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
                 '<a href="https://www.google.com/maps/search/?api=1&query=' +
                 station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
                 description;
-            return await ctx.replyWithHTML(message, Markup.removeKeyboard(true));
-        });
+            await ctx.replyWithHTML(message, Markup.removeKeyboard(true));
+        }
     });
 
 const bot = async function() {
@@ -97,12 +93,38 @@ const bot = async function() {
     botInstance.hears('hi', (ctx) => ctx.reply('Hey there'));
     botInstance.hears(/^((95 та преміум)|(ДП та преміум)|(ГАЗ)|(92))$/, (ctx) => {
         //ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
-        ctx['session']['lastFuelCommand'] = ctx.message.text;
+        const configuration = {
+            '95 та преміум': ['PULLS 95', 'М100', '98', 'М95', '95'],
+            '92': ['92'],
+            'ДП та преміум': ['МДП+', 'PULLS Diesel', 'МДП', 'ДП'],
+            'ГАЗ': ['ГАЗ']
+        }
+        ctx['session']['fuelType'] = configuration[ctx.message.text];
         return ctx.reply(
-            'Отримати інформацію по паливу за гео-локацією...',
-            Markup.keyboard([Markup.button.locationRequest("Поділитися гео-локацією")]).resize().oneTime()
+            'Оберіть форму оплати',
+            Markup.keyboard([
+                ['Готівка, банківська карта чи додаток'],
+                ['Талони, паливна карта'],
+                ['Спец транспорт']
+            ]).oneTime().resize()
         )
     });
+
+    botInstance.hears(/^((Готівка, банківська карта чи додаток)|(Талони, паливна карта)|(Спец транспорт))$/, (ctx) => {
+        //ctx.telegram.deleteMessage(ctx.message.chat.id, ctx.message.message_id);
+        const configuration = {
+            'Готівка, банківська карта чи додаток': ['MOBILE_APP', 'BANK_CARD', 'CASH'],
+            'Талони, паливна карта': ['PALYVNA_CARD', 'TALON'],
+            'Спец транспорт': ['TRANSPORT']
+        }
+        ctx['session']['payMethod'] = configuration[ctx.message.text];
+        return ctx.reply(
+            'Отримати інформацію по паливу за гео-локацією...',
+            Markup.keyboard([Markup.button.locationRequest("Поділитися розташуванням")]).resize().oneTime()
+        )
+    });
+
+
     botInstance.use(geolocationMiddleware);
 
     botInstance.telegram.setWebhook(process.env.TELEGRAM_BOT_HOOK_PATH);
