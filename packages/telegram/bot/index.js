@@ -69,7 +69,7 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
                 .filter((el, i) => fuels.includes(el.fuel.normalizedStandard))
                 .map(el => el.description)
             const description = [...new Set(descriptions)].join('\n');
-            const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) + ' км</b>\n' +
+            const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) + ' км ' + station.company + '</b>\n' +
                 station.description + '\n' +
                 '<a href="https://www.google.com/maps/search/?api=1&query=' + station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
                 description;
