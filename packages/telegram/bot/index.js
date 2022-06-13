@@ -20,6 +20,10 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
         const client = await connect();
         const db = await client.db(process.env.DATABASE);
         const stationsCollection = await db.collection("stations");
+
+        console.log("fuels=" + fuels);
+        console.log("payMethods=" + payMethods);
+
         const aggregation = [{
                 '$geoNear': {
                     'near': {
@@ -32,7 +36,7 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
                         'fuelLimits': {
                             '$elemMatch': {
                                 'limitType': {
-                                    '$in': ['MOBILE_APP', 'BANK_CARD', 'CASH']
+                                    '$in': payMethods
                                 },
                                 'fuel.normalizedStandard': {
                                     '$in': fuels
@@ -67,8 +71,7 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
             const description = [...new Set(descriptions)].join('\n');
             const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) + ' км</b>\n' +
                 station.description + '\n' +
-                '<a href="https://www.google.com/maps/search/?api=1&query=' +
-                station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
+                '<a href="https://www.google.com/maps/search/?api=1&query=' + station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
                 description;
             await ctx.replyWithHTML(message, Markup.removeKeyboard(true));
         }
