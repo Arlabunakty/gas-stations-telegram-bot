@@ -64,11 +64,16 @@ const geolocationMiddleware = Telegraf.optional(f => f.update_id === undefined &
 
         for (let index = 0; index < stations.length; index++) {
             const station = stations[index];
-            const descriptions = station.fuelLimits
-                .filter((el, i) => payMethods.includes(el.limitType))
+            const fuelLimits = {};
+            station.fuelLimits.filter((el, i) => payMethods.includes(el.limitType))
                 .filter((el, i) => fuels.includes(el.fuel.normalizedStandard))
-                .map(el => el.description)
-            const description = [...new Set(descriptions)].join('\n');
+                .forEach(el => {
+                    fuelLimits[el.fuel.name] = fuelLimits[el.fuel.name] || [];
+                    fuelLimits[el.fuel.name].push(el.description);
+                });
+            const descriptions = Object.entries(fuelLimits)
+                .map(([key, values], i) => key + ' - ' + [...new Set(values)].join(', '));
+            const description = descriptions.join('\n');
             const message = '<b>' + ((station.distance / 1000).toFixed(2) * 1) + ' км ' + station.company + '</b>\n' +
                 station.description + '\n' +
                 '<a href="https://www.google.com/maps/search/?api=1&query=' + station.geoPoint.lat + ',' + station.geoPoint.lon + '">Google Map</a>\n' +
